@@ -46,8 +46,8 @@ def traceroute(dst_addr, max_hops, timeout, icmp_port):
         rx_socket = RXsetup(icmp_port, timeout)
 
         """
-        Here we send the intial -empty- ICMP request to the target host
-        We try to read a response tries_left times
+        send an empty ICMP request to the target host
+        We try to read a response "tries_left" times
         """
         tx_socket.sendto(bytes("", "utf-8"), (dst_addr, icmp_port))
         current_addr = None
@@ -64,7 +64,7 @@ def traceroute(dst_addr, max_hops, timeout, icmp_port):
         closeSockets(tx_socket, rx_socket)
 
         """
-        Here we try to identify the host we made a hop to,
+        try to identify the host we made a hop to,
         if we can't get a hostname we use the IP address
         """
         current_addr = current_addr[0]
