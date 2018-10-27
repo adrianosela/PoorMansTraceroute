@@ -44,7 +44,9 @@ def traceroute(dst_addr, max_hops, timeout, icmp_port):
         while tries_left > 0:
             try:
                 _, current_addr = rx_socket.recvfrom(512) # receive the IP of the next host to hit
-            except socket.error:
+            except socket.error as e:
+                if str(e) == "[Errno 35] Resource temporarily unavailable":
+                    break
                 tries_left = tries_left - 1
                 sys.stdout.write("* ")
         
