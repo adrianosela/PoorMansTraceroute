@@ -2,7 +2,18 @@ import socket
 import sys
 import io
 import struct
-import time
+
+"""
+The console class wraps stdout into a console by modifying the write() function of the 
+io.FileIO type to make it flush after every call to write()
+"""
+class console(io.FileIO):
+    def __init__(self, infile):
+        self.infile = infile
+    def write(self, x):
+        self.infile.write(x)
+        self.infile.flush()
+sys.stdout = console(sys.stdout)
 
 # Build an ICMP socket (for ICMP raw data) which includes a GNU timeout struct
 def RXsetup(icmp_port, icmp_timeout):
@@ -45,8 +56,8 @@ def traceroute(dst_addr, max_hops, timeout, icmp_port):
             try:
                 _, current_addr = rx_socket.recvfrom(512) # receive the IP of the next host to hit
             except socket.error as e:
-                if str(e) == "[Errno 35] Resource temporarily unavailable":
-                    break
+                #if str(e) == "[Errno 35] Resource temporarily unavailable":
+                #    break
                 tries_left = tries_left - 1
                 sys.stdout.write("* ")
         
@@ -54,7 +65,7 @@ def traceroute(dst_addr, max_hops, timeout, icmp_port):
 
         """
         Here we try to identify the host we made a hop to,
-        if we can't get a hostname (via DNS) we use the IP address
+        if we can't get a hostname we use the IP address
         """
         current_addr = current_addr[0]
         try:
