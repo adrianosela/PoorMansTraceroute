@@ -64,7 +64,7 @@ def traceroute(dst_addr, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
         closeSockets(tx_socket, rx_socket)
 
         if current_addr is None:
-            print("----> Error: Could not read ICMP response after %d attempts <----" % attempts_per_hop)
+            print("----> Error: Could not read ICMP response after %d attempts <----" % icmp_attempts_per_hop)
             exit(1)
         else:
             """
