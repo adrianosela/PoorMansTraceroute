@@ -38,8 +38,9 @@ def closeSockets(s1, s2):
 # hosts running ICMP do it at port 33434 by convention, so we are basically pinging
 # that port. Each ICMP request will have the timeout value provided.
 # If by max_hops hops we have not reached the destination host, we exit.
-def traceroute(dst_addr, max_hops, timeout, icmp_port):
+def traceroute(dst_addr, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
     for ttl in range(1, max_hops+1):
+
         sys.stdout.write(" %d  " % ttl) # print number of current hop
 
         tx_socket = TXsetup(ttl)
@@ -51,10 +52,11 @@ def traceroute(dst_addr, max_hops, timeout, icmp_port):
         """
         tx_socket.sendto(bytes("", "utf-8"), (dst_addr, icmp_port))
         current_addr = None
-        tries_left = 3
+        tries_left = icmp_attempts_per_hop
         while tries_left > 0:
             try:
                 _, current_addr = rx_socket.recvfrom(512) # receive the IP of the next host to hit
+                current_addr = current_addr[0]
             except socket.error as e:
                 #if str(e) == "[Errno 35] Resource temporarily unavailable":
                 #    break
@@ -63,32 +65,30 @@ def traceroute(dst_addr, max_hops, timeout, icmp_port):
         
         closeSockets(tx_socket, rx_socket)
 
-        """
-        try to identify the host we made a hop to,
-        if we can't get a hostname we use the IP address
-        """
-        current_addr = current_addr[0]
-        try:
-            current_name = socket.gethostbyaddr(current_addr)[0]
-        except socket.error as dnsErr:
-            current_name = current_addr
-
-        if current_addr is not None:
+        if current_addr is None:
+            print("----> Error: Could not read ICMP response after %d attempts <----" % attempts_per_hop)
+            exit(1)
+        else:
+            """
+            try to identify the host we made a hop to,
+            if we can't get a hostname we use the IP address
+            """
+            try:
+                current_name = socket.gethostbyaddr(current_addr)[0]
+            except socket.error as translationErr:
+                current_name = current_addr            
             sys.stdout.write("%s (%s)\n" % (current_name, current_addr))
 
         if (current_addr == dst_addr):
-            return ttl
+            print("-----> Done in %d hops <-----" % ttl)
+            return
 
         if ttl == max_hops:
             print("----> ERROR: Could not trace route in %d hops <----" % max_hops)
             exit(1)
 
-def main(dst_host):
-    print("----> Traceroute for %s <----" % dst_host)
-    dst_addr = socket.gethostbyname(dst_host)
-    hops_taken = traceroute(dst_addr, 30, 4, 33434)
-    print("-----> Done in %d hops <-----" % hops_taken)
-
 if __name__=="__main__":
     hostname = sys.argv[1]
-    main(hostname)
+    print("----> Traceroute for %s <----" % hostname)
+    dst_addr = socket.gethostbyname(hostname)
+    traceroute(dst_addr, 30, 4, 33434, 3)
