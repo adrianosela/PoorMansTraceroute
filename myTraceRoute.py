@@ -41,7 +41,7 @@ def closeSockets(s1, s2):
 def traceroute(dst_addr, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
     for ttl in range(1, max_hops+1):
 
-        sys.stdout.write(" %d  " % ttl) # print number of current hop
+        sys.stdout.write(" %d " % ttl) # print number of current hop
 
         tx_socket = TXsetup(ttl)
         rx_socket = RXsetup(icmp_port, timeout)
@@ -64,8 +64,7 @@ def traceroute(dst_addr, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
         closeSockets(tx_socket, rx_socket)
 
         if current_addr is None:
-            print("----> Error: Could not read ICMP response after %d attempts <----" % icmp_attempts_per_hop)
-            exit(1)
+            sys.stdout.write("\n")
         else:
             """
             try to identify the host we made a hop to,
