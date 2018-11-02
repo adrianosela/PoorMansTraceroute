@@ -35,23 +35,21 @@ def closeSockets(s1, s2):
     s1.close()
     s2.close()
 
-# intializes a simple socket for 
-def initSocket(timeout):
-    return s
-
 # returns the current time in milliseconds
 def timeMillis():
     return int(round(time.time()*1000))
 
+"""
+ping() is our core function, it sends an empty ICMP packet to the destination
+address with the respective rtt (or hop number) and calculates the RTT
+"""
 def ping(dst_addr, ttl, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations):
     results = ""
     current_addr = None
     for pingNo in range(1, rtt_calculations+1):
-
         # set-up sockets
         tx_socket = TXsetup(ttl)
         rx_socket = RXsetup(icmp_port, timeout)
-
         """
         send an empty ICMP request to the target host
         We try to read a response "tries_left" times
@@ -102,6 +100,7 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop, rt
         sys.stdout.write(" %d " % hopNo)
         current_addr = ping(dst_addr, hopNo, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations)
         if current_addr is None:
+            # there has been an error/timeout
             continue
         if (current_addr == dst_addr):
             print("-----> SUCCESS: Done in %d hops <-----" % hopNo)
