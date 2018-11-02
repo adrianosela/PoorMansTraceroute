@@ -39,20 +39,17 @@ def closeSockets(s1, s2):
 def initSocket(timeout):
     return s
 
-# pings a host's port "messages" times 
-def ping(messages, host, port, timeout):
-    for msg_num in range(0, messages):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.settimeout(timeout)
-        msg = "PING {0}".format(msg_num)
-        s.sendto(msg.encode(), (host, port))
+# pings a host's port "messages" times  (the port here doesnt really matter)
+def ping(requests, host, tx_socket, tx_port, rx_socket):
+    for _ in range(0, requests):
+        tx_socket.sendto(bytes("", "utf-8"), (host, tx_port))
         try:
             start = timeMillis()
-            resp, _ = s.recvfrom(2018)
-        except timeout:
+            _, _ = rx_socket.recvfrom(512)
+        except socket.error:
             sys.stdout.write("request timed out")
             continue
-        sys.stdout.write("%d ms" % (time.Millis()-start))
+        sys.stdout.write("%d ms" % (timeMillis()-start))
 
 # returns the current time in milliseconds
 def timeMillis():
@@ -89,8 +86,6 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
                 tries_left = tries_left - 1
                 sys.stdout.write("* ")
         
-        closeSockets(tx_socket, rx_socket)
-
         if current_addr is None:
             sys.stdout.write("\n")
         else:
@@ -103,7 +98,9 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
             except socket.error as translationErr:
                 current_name = current_addr            
             sys.stdout.write("%s (%s)\n" % (current_name, current_addr))
-            #ping(3, current_addr, icmp_port, 5)
+            #ping(3, current_addr, tx_socket, icmp_port, rx_socket)
+
+        closeSockets(tx_socket, rx_socket)
 
         if (current_addr == dst_addr):
             print("-----> Done in %d hops <-----" % ttl)
