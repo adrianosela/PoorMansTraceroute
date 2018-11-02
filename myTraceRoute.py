@@ -99,9 +99,7 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop, rt
         # print the hop number and perform ping
         sys.stdout.write(" %d " % hopNo)
         current_addr = ping(dst_addr, hopNo, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations)
-        if current_addr is None:
-            # there has been an error/timeout
-            continue
+
         if (current_addr == dst_addr):
             print("-----> SUCCESS: Done in %d hops <-----" % hopNo)
             return
