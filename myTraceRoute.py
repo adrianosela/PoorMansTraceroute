@@ -43,17 +43,12 @@ def initSocket(timeout):
 def timeMillis():
     return int(round(time.time()*1000))
 
-# traceroute will perform a traceroute from the source host to the destination host
-# hosts running ICMP. Each ICMP request will have the timeout value provided.
-# If by max_hops hops we have not reached the destination host, we exit.
-def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
-    print("----> Traceroute for %s <----" % hostname)
-    dst_addr = socket.gethostbyname(hostname)
+def ping(dst_addr, ttl, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations):
+    results = ""
+    current_addr = None
+    for pingNo in range(1, rtt_calculations+1):
 
-    for ttl in range(1, max_hops+1):
-
-        sys.stdout.write(" %d " % ttl) # print number of current hop
-
+        # set-up sockets
         tx_socket = TXsetup(ttl)
         rx_socket = RXsetup(icmp_port, timeout)
 
@@ -61,6 +56,7 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
         send an empty ICMP request to the target host
         We try to read a response "tries_left" times
         """
+        start = timeMillis()
         tx_socket.sendto(bytes("", "utf-8"), (dst_addr, icmp_port))
         current_addr = None
         done = False
@@ -69,6 +65,7 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
             try:
                 _, current_addr = rx_socket.recvfrom(512) # receive the IP of the next host to hit
                 done = True
+                rtt = timeMillis()-start
                 current_addr = current_addr[0]
             except socket.error:
                 tries_left = tries_left - 1
@@ -76,6 +73,7 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
         
         if current_addr is None:
             sys.stdout.write("\n")
+            return None
         else:
             """
             try to identify the host we made a hop to,
@@ -84,20 +82,34 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
             try:
                 current_name = socket.gethostbyaddr(current_addr)[0]
             except socket.error as translationErr:
-                current_name = current_addr            
-            sys.stdout.write("%s (%s) " % (current_name, current_addr))
-            sys.stdout.write("\n")
-
+                current_name = current_addr       
+            if pingNo == 1: 
+                results += ("%s (%s) [%dms" % (current_name, current_addr, rtt))
+            else:
+                results += ("|%dms" % rtt)
         closeSockets(tx_socket, rx_socket)
+    sys.stdout.write("%s]\n" % results)
+    return current_addr
 
+# traceroute will perform a traceroute from the source host to the destination host
+# hosts running ICMP. Each ICMP request will have the timeout value provided.
+# If by max_hops hops we have not reached the destination host, we exit.
+def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations):
+    print("----> Traceroute for %s <----" % hostname)
+    dst_addr = socket.gethostbyname(hostname)
+    for hopNo in range(1, max_hops+1):
+        # print the hop number and perform ping
+        sys.stdout.write(" %d " % hopNo)
+        current_addr = ping(dst_addr, hopNo, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations)
+        if current_addr is None:
+            continue
         if (current_addr == dst_addr):
-            print("-----> Done in %d hops <-----" % ttl)
+            print("-----> SUCCESS: Done in %d hops <-----" % hopNo)
             return
-
-        if ttl == max_hops:
+        if hopNo == max_hops:
             print("----> ERROR: Could not trace route in %d hops <----" % max_hops)
-            exit(1)
+            return
 
 if __name__=="__main__":
     hostname = sys.argv[1]
-    traceroute(hostname, max_hops=30, timeout=4, icmp_port=33434, icmp_attempts_per_hop=3)
+    traceroute(hostname, max_hops=30, timeout=4, icmp_port=33434, icmp_attempts_per_hop=3, rtt_calculations=3)
