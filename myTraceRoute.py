@@ -17,8 +17,8 @@ sys.stdout = console(sys.stdout)
 
 # Build an ICMP socket (for ICMP raw data) which includes a GNU timeout struct
 def RXsetup(icmp_port, icmp_timeout):
-    GNUtimeout = struct.pack("ll", icmp_timeout, 0)
     rx_s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
+    GNUtimeout = struct.pack("ll", icmp_timeout, 0)
     rx_s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, GNUtimeout)
     rx_s.bind(("", icmp_port))
     return rx_s
@@ -35,8 +35,7 @@ def closeSockets(s1, s2):
     s2.close()
 
 # traceroute will perform a traceroute from the source host to the destination host
-# hosts running ICMP do it at port 33434 by convention, so we are basically pinging
-# that port. Each ICMP request will have the timeout value provided.
+# hosts running ICMP. Each ICMP request will have the timeout value provided.
 # If by max_hops hops we have not reached the destination host, we exit.
 def traceroute(dst_addr, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
     for ttl in range(1, max_hops+1):
@@ -52,10 +51,12 @@ def traceroute(dst_addr, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
         """
         tx_socket.sendto(bytes("", "utf-8"), (dst_addr, icmp_port))
         current_addr = None
+        done = False
         tries_left = icmp_attempts_per_hop
-        while tries_left > 0:
+        while not done and tries_left > 0:
             try:
                 _, current_addr = rx_socket.recvfrom(512) # receive the IP of the next host to hit
+                done = True
                 current_addr = current_addr[0]
             except socket.error:
                 tries_left = tries_left - 1
@@ -88,4 +89,4 @@ if __name__=="__main__":
     hostname = sys.argv[1]
     print("----> Traceroute for %s <----" % hostname)
     dst_addr = socket.gethostbyname(hostname)
-    traceroute(dst_addr, 30, 4, 33434, 3)
+    traceroute(dst_addr, max_hops=30, timeout=4, icmp_port=33434, icmp_attempts_per_hop=3)
