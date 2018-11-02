@@ -2,6 +2,7 @@ import socket
 import sys
 import io
 import struct
+import time
 
 """
 The console class wraps stdout into a console by modifying the write() function of the 
@@ -33,6 +34,29 @@ def TXsetup(ttl):
 def closeSockets(s1, s2):
     s1.close()
     s2.close()
+
+# intializes a simple socket for 
+def initSocket(timeout):
+    return s
+
+# pings a host's port "messages" times 
+def ping(messages, host, port, timeout):
+    for msg_num in range(0, messages):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(timeout)
+        msg = "PING {0}".format(msg_num)
+        s.sendto(msg.encode(), (host, port))
+        try:
+            start = timeMillis()
+            resp, _ = s.recvfrom(2018)
+        except timeout:
+            sys.stdout.write("request timed out")
+            continue
+        sys.stdout.write("%d ms" % (time.Millis()-start))
+
+# returns the current time in milliseconds
+def timeMillis():
+    return int(round(time.time()*1000))
 
 # traceroute will perform a traceroute from the source host to the destination host
 # hosts running ICMP. Each ICMP request will have the timeout value provided.
@@ -79,6 +103,7 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
             except socket.error as translationErr:
                 current_name = current_addr            
             sys.stdout.write("%s (%s)\n" % (current_name, current_addr))
+            #ping(3, current_addr, icmp_port, 5)
 
         if (current_addr == dst_addr):
             print("-----> Done in %d hops <-----" % ttl)
