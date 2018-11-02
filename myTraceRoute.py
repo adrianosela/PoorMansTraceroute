@@ -37,7 +37,10 @@ def closeSockets(s1, s2):
 # traceroute will perform a traceroute from the source host to the destination host
 # hosts running ICMP. Each ICMP request will have the timeout value provided.
 # If by max_hops hops we have not reached the destination host, we exit.
-def traceroute(dst_addr, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
+def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
+    print("----> Traceroute for %s <----" % hostname)
+    dst_addr = socket.gethostbyname(hostname)
+
     for ttl in range(1, max_hops+1):
 
         sys.stdout.write(" %d " % ttl) # print number of current hop
@@ -87,6 +90,4 @@ def traceroute(dst_addr, max_hops, timeout, icmp_port, icmp_attempts_per_hop):
 
 if __name__=="__main__":
     hostname = sys.argv[1]
-    print("----> Traceroute for %s <----" % hostname)
-    dst_addr = socket.gethostbyname(hostname)
-    traceroute(dst_addr, max_hops=30, timeout=4, icmp_port=33434, icmp_attempts_per_hop=3)
+    traceroute(hostname, max_hops=30, timeout=4, icmp_port=33434, icmp_attempts_per_hop=3)
