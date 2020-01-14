@@ -95,17 +95,15 @@ def ping(dst_addr, ttl, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculati
 def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations):
     print("----> Traceroute for %s <----" % hostname)
     dst_addr = socket.gethostbyname(hostname)
-    for hopNo in range(1, max_hops+1):
+    for hop in range(1, max_hops+1):
         # print the hop number and perform ping
-        sys.stdout.write(" %d " % hopNo)
-        current_addr = ping(dst_addr, hopNo, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations)
-
-        if (current_addr == dst_addr):
-            print("-----> SUCCESS: Done in %d hops <-----" % hopNo)
+        sys.stdout.write(" %d " % hop)
+        cur_addr = ping(dst_addr, hop, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations)
+        if (cur_addr == dst_addr):
+            print("-----> SUCCESS: Done in %d hops <-----" % hop)
             return
-        if hopNo == max_hops:
-            print("----> ERROR: Could not trace route in %d hops <----" % max_hops)
-            return
+    print("----> ERROR: Could not trace route in %d hops <----" % max_hops)
+    return
 
 if __name__=="__main__":
     hostname = sys.argv[1]
