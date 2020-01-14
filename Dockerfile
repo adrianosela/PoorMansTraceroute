@@ -1,5 +1,5 @@
 FROM python:3
 
-ADD myTraceRoute.py /
+ADD traceroute.py /
 
-CMD [ "python", "myTraceRoute.py", "google.com" ]
+CMD [ "python", "traceroute.py", "google.com" ]
