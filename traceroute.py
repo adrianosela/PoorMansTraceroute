@@ -45,25 +45,24 @@ address with the respective rtt (or hop number) and calculates the RTT
 def ping(dst_addr, ttl, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations):
     results = ""
     current_addr = None
-    for pingNo in range(1, rtt_calculations+1):
-        # set-up sockets
+    for pingNo in range(rtt_calculations):
         tx_socket = TXsetup(ttl)
         rx_socket = RXsetup(icmp_port, timeout)
-        """
-        send an empty ICMP request to the target host
-        We try to read a response "tries_left" times
-        """
-        start = timeMillis()
-        tx_socket.sendto(bytes("", "utf-8"), (dst_addr, icmp_port))
         current_addr = None
         done = False
         tries_left = icmp_attempts_per_hop
         while not done and tries_left > 0:
             try:
-                _, current_addr = rx_socket.recvfrom(512) # receive the IP of the next host to hit
-                done = True
+                """
+                Send an empty ICMP request to the target host
+                """
+                start = timeMillis()
+                tx_socket.sendto(bytes("", "utf-8"), (dst_addr, icmp_port))
+                _, addr = rx_socket.recvfrom(512) # receive the IP of the next host to hit
                 rtt = timeMillis()-start
-                current_addr = current_addr[0]
+
+                done = True
+                current_addr = addr[0]
             except socket.error:
                 tries_left = tries_left - 1
                 sys.stdout.write("* ")
@@ -80,7 +79,7 @@ def ping(dst_addr, ttl, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculati
                 current_name = socket.gethostbyaddr(current_addr)[0]
             except socket.error as translationErr:
                 current_name = current_addr       
-            if pingNo == 1: 
+            if pingNo == 0:
                 results += ("%s (%s) [%dms" % (current_name, current_addr, rtt))
             else:
                 results += ("|%dms" % rtt)
