@@ -29,14 +29,17 @@ def TXsetup(ttl):
     tx_s.setsockopt(socket.SOL_IP, socket.IP_TTL, ttl)
     return tx_s
 
-# Close a pair of sockets
-def closeSockets(s1, s2):
-    s1.close()
-    s2.close()
-
 # returns the current time in milliseconds
 def timeMillis():
     return int(round(time.time()*1000))
+
+# reverse lookup performs a reverse DNS lookup for a given ip address
+def reverse_lookup(ip):
+    try:
+        name = socket.gethostbyaddr(ip)[0]
+    except socket.error as translation_error:
+        return ip, False
+    return name, True
 
 """
 ping() is our core function, it sends an empty ICMP packet to the destination
@@ -44,17 +47,15 @@ address with the respective rtt (or hop number) and calculates the RTT
 """
 def ping(dst_addr, ttl, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations):
     results = ""
-    current_addr = None
-    for pingNo in range(rtt_calculations):
-        tx_socket = TXsetup(ttl)
-        rx_socket = RXsetup(icmp_port, timeout)
-        current_addr = None
-        done = False
-        tries_left = icmp_attempts_per_hop
+    for calc in range(rtt_calculations):
+
+        tx_socket, rx_socket = TXsetup(ttl), RXsetup(icmp_port, timeout)
+        current_addr, done, tries_left = None, False, icmp_attempts_per_hop
+
         while not done and tries_left > 0:
             try:
                 """
-                Send an empty ICMP request to the target host
+                Send an empty UDP request to the target host
                 """
                 start = timeMillis()
                 tx_socket.sendto(bytes("", "utf-8"), (dst_addr, icmp_port))
@@ -66,24 +67,20 @@ def ping(dst_addr, ttl, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculati
             except socket.error:
                 tries_left = tries_left - 1
                 sys.stdout.write("* ")
-        
+
         if current_addr is None:
             sys.stdout.write("\n")
             return None
+
+        if calc == 0:
+            name, _ = reverse_lookup(current_addr) 
+            results += ("%s (%s) [%dms" % (name, current_addr, rtt))
         else:
-            """
-            try to identify the host we made a hop to,
-            if we can't get a hostname we use the IP address
-            """
-            try:
-                current_name = socket.gethostbyaddr(current_addr)[0]
-            except socket.error as translationErr:
-                current_name = current_addr       
-            if pingNo == 0:
-                results += ("%s (%s) [%dms" % (current_name, current_addr, rtt))
-            else:
-                results += ("|%dms" % rtt)
-        closeSockets(tx_socket, rx_socket)
+            results += ("|%dms" % rtt)
+
+        tx_socket.close()
+        rx_socket.close()
+
     sys.stdout.write("%s]\n" % results)
     return current_addr
 
