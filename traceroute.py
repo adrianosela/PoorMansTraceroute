@@ -14,7 +14,6 @@ class console(io.FileIO):
     def write(self, x):
         self.infile.write(x)
         self.infile.flush()
-sys.stdout = console(sys.stdout)
 
 # Build an ICMP socket (for ICMP raw data) which includes a GNU timeout struct
 def RXsetup(icmp_port, icmp_timeout):
@@ -106,5 +105,6 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop, rt
     return
 
 if __name__=="__main__":
+    sys.stdout = console(sys.stdout) # wrap stdout in a flushing console
     hostname = sys.argv[1]
     traceroute(hostname, max_hops=30, timeout=4, icmp_port=33434, icmp_attempts_per_hop=3, rtt_calculations=3)
