@@ -4,10 +4,8 @@ import io
 import struct
 import time
 
-"""
-The console class wraps stdout into a console by modifying the write() function of the 
-io.FileIO type to make it flush after every call to write()
-"""
+# class that wraps stdout into a console by modifying the write() function
+# of the io.FileIO type to make it flush after every call to write()
 class console(io.FileIO):
     def __init__(self, infile):
         self.infile = infile
@@ -63,10 +61,7 @@ def try_measure_round_trip(dst_host, dst_port, rx_port, ttl, tries, read_timeout
     rx_socket.close()
     return None, 0, False
 
-"""
-ping() is our core function, it sends an empty ICMP packet to the destination
-address with the respective rtt (or hop number) and calculates the RTT
-"""
+# runs the classic ping operation with rtt_calculations for round trip time
 def ping(dst_addr, ttl, timeout, icmp_port, tries_per_hop, rtt_calculations):
     results = ""
     for calc in range(rtt_calculations):
@@ -99,6 +94,8 @@ def traceroute(hostname, max_hops, timeout, icmp_port, tries_per_hop, rtt_calcul
     return
 
 if __name__=="__main__":
+    if len(sys.argv) < 2:
+        print("USAGE: (sudo) python3 traceroute.py [ hostname ]")
+        exit(1)
     sys.stdout = console(sys.stdout) # wrap stdout in a flushing console
-    hostname = sys.argv[1]
-    traceroute(hostname, max_hops=30, timeout=2, icmp_port=33434, tries_per_hop=3, rtt_calculations=3)
+    traceroute(hostname=sys.argv[1], max_hops=30, timeout=2, icmp_port=33434, tries_per_hop=3, rtt_calculations=3)
