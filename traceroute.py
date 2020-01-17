@@ -15,22 +15,24 @@ class console(io.FileIO):
         self.infile.write(x)
         self.infile.flush()
 
-# Build an ICMP socket (for ICMP raw data) which includes a GNU timeout struct
+# set up a raw internet socket to receive ICMP messages on
+# a specified port and with a specified read timeout
 def RXsetup(icmp_port, icmp_timeout):
+    timeout = struct.pack("ll", icmp_timeout, 0) # 16-bit timeout value
     rx_s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
-    GNUtimeout = struct.pack("ll", icmp_timeout, 0)
-    rx_s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, GNUtimeout)
+    rx_s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, timeout)
     rx_s.bind(("", icmp_port))
     return rx_s
 
-# Build a normal UDP socket (for UDP datagrams) with a given time-to-live (ttl)
+# set up an internet datagram socket to send UDP packets
+# with a given time-to-live (ttl)
 def TXsetup(ttl):
     tx_s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     tx_s.setsockopt(socket.SOL_IP, socket.IP_TTL, ttl)
     return tx_s
 
 # returns the current time in milliseconds
-def timeMillis():
+def time_ms():
     return int(round(time.time()*1000))
 
 # reverse lookup performs a reverse DNS lookup for a given ip address
@@ -57,10 +59,10 @@ def ping(dst_addr, ttl, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculati
                 """
                 Send an empty UDP request to the target host
                 """
-                start = timeMillis()
+                start = time_ms()
                 tx_socket.sendto(bytes("", "utf-8"), (dst_addr, icmp_port))
                 _, addr = rx_socket.recvfrom(512) # receive the IP of the next host to hit
-                rtt = timeMillis()-start
+                rtt = time_ms() - start
 
                 done = True
                 current_addr = addr[0]
@@ -103,4 +105,4 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop, rt
 if __name__=="__main__":
     sys.stdout = console(sys.stdout) # wrap stdout in a flushing console
     hostname = sys.argv[1]
-    traceroute(hostname, max_hops=30, timeout=4, icmp_port=33434, icmp_attempts_per_hop=3, rtt_calculations=3)
+    traceroute(hostname, max_hops=30, timeout=2, icmp_port=33434, icmp_attempts_per_hop=3, rtt_calculations=3)
