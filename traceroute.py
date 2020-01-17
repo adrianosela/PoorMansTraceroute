@@ -35,7 +35,7 @@ def TXsetup(ttl):
 def time_ms():
     return int(round(time.time()*1000))
 
-# reverse lookup performs a reverse DNS lookup for a given ip address
+# performs a reverse DNS lookup for a given ip address
 def reverse_lookup(ip):
     try:
         name = socket.gethostbyaddr(ip)[0]
@@ -43,59 +43,55 @@ def reverse_lookup(ip):
         return ip, False
     return name, True
 
+# attempts to measure the round trip time to a server
+def try_measure_round_trip(dst_host, dst_port, rx_port, ttl, tries, read_timeout):
+    tx_socket = TXsetup(ttl)
+    rx_socket = RXsetup(rx_port, read_timeout)
+    addr = None
+    while addr is None and tries > 0:
+        try:
+            start = time_ms()
+            tx_socket.sendto(bytes("", "utf-8"), (dst_host, dst_port))
+            _, icmp_sender_addr = rx_socket.recvfrom(256)
+            rtt = time_ms() - start
+        except socket.error:
+            tries = tries - 1
+            sys.stdout.write("* ")
+            continue
+        return icmp_sender_addr[0], rtt, True
+    tx_socket.close()
+    rx_socket.close()
+    return None, 0, False
+
 """
 ping() is our core function, it sends an empty ICMP packet to the destination
 address with the respective rtt (or hop number) and calculates the RTT
 """
-def ping(dst_addr, ttl, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations):
+def ping(dst_addr, ttl, timeout, icmp_port, tries_per_hop, rtt_calculations):
     results = ""
     for calc in range(rtt_calculations):
-
-        tx_socket, rx_socket = TXsetup(ttl), RXsetup(icmp_port, timeout)
-        current_addr, done, tries_left = None, False, icmp_attempts_per_hop
-
-        while not done and tries_left > 0:
-            try:
-                """
-                Send an empty UDP request to the target host
-                """
-                start = time_ms()
-                tx_socket.sendto(bytes("", "utf-8"), (dst_addr, icmp_port))
-                _, addr = rx_socket.recvfrom(512) # receive the IP of the next host to hit
-                rtt = time_ms() - start
-
-                done = True
-                current_addr = addr[0]
-            except socket.error:
-                tries_left = tries_left - 1
-                sys.stdout.write("* ")
-
-        if current_addr is None:
+        addr, rtt, ok = try_measure_round_trip(dst_addr, icmp_port, icmp_port, ttl, tries_per_hop, timeout)
+        if not ok:
             sys.stdout.write("\n")
             return None
-
         if calc == 0:
-            name, _ = reverse_lookup(current_addr) 
-            results += ("%s (%s) [%dms" % (name, current_addr, rtt))
+            name, _ = reverse_lookup(addr)
+            results += ("%s (%s) [%dms" % (name, addr, rtt))
         else:
             results += ("|%dms" % rtt)
-
-        tx_socket.close()
-        rx_socket.close()
-
     sys.stdout.write("%s]\n" % results)
-    return current_addr
+    return addr
 
 # traceroute will perform a traceroute from the source host to the destination host
 # hosts running ICMP. Each ICMP request will have the timeout value provided.
 # If by max_hops hops we have not reached the destination host, we exit.
-def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations):
+def traceroute(hostname, max_hops, timeout, icmp_port, tries_per_hop, rtt_calculations):
     print("----> Traceroute for %s <----" % hostname)
     dst_addr = socket.gethostbyname(hostname)
     for hop in range(1, max_hops+1):
         # print the hop number and perform ping
         sys.stdout.write(" %d " % hop)
-        cur_addr = ping(dst_addr, hop, timeout, icmp_port, icmp_attempts_per_hop, rtt_calculations)
+        cur_addr = ping(dst_addr, hop, timeout, icmp_port, tries_per_hop, rtt_calculations)
         if (cur_addr == dst_addr):
             print("-----> SUCCESS: Done in %d hops <-----" % hop)
             return
@@ -105,4 +101,4 @@ def traceroute(hostname, max_hops, timeout, icmp_port, icmp_attempts_per_hop, rt
 if __name__=="__main__":
     sys.stdout = console(sys.stdout) # wrap stdout in a flushing console
     hostname = sys.argv[1]
-    traceroute(hostname, max_hops=30, timeout=2, icmp_port=33434, icmp_attempts_per_hop=3, rtt_calculations=3)
+    traceroute(hostname, max_hops=30, timeout=2, icmp_port=33434, tries_per_hop=3, rtt_calculations=3)
